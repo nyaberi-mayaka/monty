@@ -516,8 +516,7 @@ julien@ubuntu:~/monty/bf$ bf 1003-mul.bf
 julien@ubuntu:~/monty/bf$
 ```
 ***
-## Author
-* **[The_Quadzilla](https://github.com/nyaberi-mayaka)
-* Cyrus Muthui**
+## Authors
+* **[The_Quadzilla](https://github.com/nyaberi-mayaka)**
+* **[Cyrus Muthui](https://github.com/CyrusMuthui)**
 ***
-
