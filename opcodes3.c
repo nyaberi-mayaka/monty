@@ -1,80 +1,80 @@
 #include "monty.h"
 
-void monty_rotl(stack_t **stack, unsigned int line_number);
-void monty_rotr(stack_t **stack, unsigned int line_number);
-void monty_stack(stack_t **stack, unsigned int line_number);
-void monty_queue(stack_t **stack, unsigned int line_number);
-
 /**
- * monty_rotl - Rotates the top value of a stack_t linked list to the bottom.
- * @stack: A pointer to the top mode node of a stack_t linked list.
- * @line_number: The current working line number of a Monty bytecodes file.
+ * pop - removes the top element of the stack.
+ * @head: address of the top of stack
+ * @line_num: line number of the instruction from @file
  */
-void monty_rotl(stack_t **stack, unsigned int line_number)
+void pop(stack_t **head, unsigned int line_num __attribute__ ((unused)))
 {
-	stack_t *top, *bottom;
+	stack_t *temp = *head;
 
-	if ((*stack)->next == NULL || (*stack)->next->next == NULL)
-		return;
+	if (*head)
+	{
+		*head = temp->next;
+		if (*head)
+			(*head)->prev = NULL;
+		free(temp);
+	}
+}
+/**
+ * swap - swaps the top two elements of the stack.
+ * @head: address of the top of stack
+ * @line_num: line number of the instruction from @file
+ */
 
-	top = (*stack)->next;
-	bottom = (*stack)->next;
-	while (bottom->next != NULL)
-		bottom = bottom->next;
+void swap(stack_t **head, unsigned int line_num __attribute__ ((unused)))
+{
+	int temp;
 
-	top->next->prev = *stack;
-	(*stack)->next = top->next;
-	bottom->next = top;
-	top->next = NULL;
-	top->prev = bottom;
-
-	(void)line_number;
+	if (*head && (*head)->next)
+	{
+		temp = (*head)->next->n;
+		(*head)->next->n = (*head)->n;
+		(*head)->n = temp;
+	}
 }
 
+
 /**
- * monty_rotr - Rotates the bottom value of a stack_t linked list to the top.
- * @stack: A pointer to the top mode node of a stack_t linked list.
- * @line_number: The current working line number of a Monty bytecodes file.
+ * add - adds the top two elements of the stack.
+ * @head: address of the top of stack
+ * @line_num: line number of the instruction from @file
  */
-void monty_rotr(stack_t **stack, unsigned int line_number)
+
+void add(stack_t **head, unsigned int line_num __attribute__ ((unused)))
 {
-	stack_t *top, *bottom;
-
-	if ((*stack)->next == NULL || (*stack)->next->next == NULL)
-		return;
-
-	top = (*stack)->next;
-	bottom = (*stack)->next;
-	while (bottom->next != NULL)
-		bottom = bottom->next;
-
-	bottom->prev->next = NULL;
-	(*stack)->next = bottom;
-	bottom->prev = *stack;
-	bottom->next = top;
-	top->prev = bottom;
-
-	(void)line_number;
+	if (*head && (*head)->next)
+	{
+		(*head)->next->n += (*head)->n;
+		pop(head, line_num);
+	}
 }
 
-/**
- * monty_stack - Converts a queue to a stack.
- * @stack: A pointer to the top mode node of a stack_t linked list.
- * @line_number: The current working line number of a Monty bytecodes file.
- */
-void monty_stack(stack_t **stack, unsigned int line_number)
-{
-	(*stack)->n = STACK;
-	(void)line_number;
-}
 
 /**
- * monty_queue - Converts a stack to a queue.
- * @stack: A pointer to the top mode node of a stack_t linked list.
- * @line_number: The current working line number of a Monty bytecodes file.
+ * nop - doesn’t do anything.
+ * @head: address of the top of stack
+ * @line_num: line number of the instruction from @file
  */
-void monty_queue(stack_t **stack, unsigned int line_number)
+void nop(stack_t **head __attribute__ ((unused)),
+	 unsigned int line_num __attribute__ ((unused)))
 {
-	(*stack)->n = QUEUE;
-	(void)line_number;
+}
+
+
+/**
+ * sub - subtracts the top element of the stack from the second
+ * top element of the stack.
+ * @head: address of the top of stack
+ * @line_num: line number of the instruction from @file
+ */
+
+void sub(stack_t **head, unsigned int line_num __attribute__ ((unused)))
+{
+	if (*head && (*head)->next)
+	{
+		(*head)->next->n -= (*head)->n;
+		pop(head, line_num);
+	}
 }

@@ -1,167 +1,144 @@
 #include "monty.h"
 
-void free_tokens(void);
-unsigned int token_arr_len(void);
-int is_empty_line(char *line, char *delims);
-void (*get_op_func(char *opcode))(stack_t **, unsigned int);
-int run_monty(FILE *script_fd);
+char **token = NULL;
+int flag = 0;
+int STACK = -1;
+
 
 /**
- * free_tokens - Frees the global op_toks array of strings.
- */
-void free_tokens(void)
-{
-	size_t i = 0;
-
-	if (op_toks == NULL)
-		return;
-
-	for (i = 0; op_toks[i]; i++)
-		free(op_toks[i]);
-
-	free(op_toks);
-}
-
-/**
- * token_arr_len - Gets the length of current op_toks.
+ * main - calls the monty opcodes
+ * @ac: argument count
+ * @av: argument vector
  *
- * Return: Length of current op_toks (as int).
+ * Return: EXIT_SUCCESS always
  */
-unsigned int token_arr_len(void)
+
+int main(int ac, char **av)
 {
-	unsigned int toks_len = 0;
+	FILE *stream = NULL;
 
-	while (op_toks[toks_len])
-		toks_len++;
-	return (toks_len);
-}
-
-/**
- * is_empty_line - Checks if a line read from getline only contains delimiters.
- * @line: A pointer to the line.
- * @delims: A string of delimiter characters.
- *
- * Return: If the line only contains delimiters - 1.
- *         Otherwise - 0.
- */
-int is_empty_line(char *line, char *delims)
-{
-	int i, j;
-
-	for (i = 0; line[i]; i++)
+	if (ac != 2)
 	{
-		for (j = 0; delims[j]; j++)
-		{
-			if (line[i] == delims[j])
-				break;
-		}
-		if (delims[j] == '\0')
-			return (0);
+		dprintf(STDERR_FILENO, "USAGE: monty file\n");
+		exit(EXIT_FAILURE);
 	}
 
-	return (1);
+	stream = open_file(av[1]);
+	read_file(stream);
+	fclose(stream);
+	return (EXIT_SUCCESS);
 }
 
-/**
- * get_op_func - Matches an opcode with its corresponding function.
- * @opcode: The opcode to match.
- *
- * Return: A pointer to the corresponding function.
- */
-void (*get_op_func(char *opcode))(stack_t **, unsigned int)
-{
-	instruction_t op_funcs[] = {
-		{"push", monty_push},
-		{"pall", monty_pall},
-		{"pint", monty_pint},
-		{"pop", monty_pop},
-		{"swap", monty_swap},
-		{"add", monty_add},
-		{"nop", monty_nop},
-		{"sub", monty_sub},
-		{"div", monty_div},
-		{"mul", monty_mul},
-		{"mod", monty_mod},
-		{"pchar", monty_pchar},
-		{"pstr", monty_pstr},
-		{"rotl", monty_rotl},
-		{"rotr", monty_rotr},
-		{"stack", monty_stack},
-		{"queue", monty_queue},
-		{NULL, NULL}};
-	int i;
 
-	for (i = 0; op_funcs[i].opcode; i++)
+/**
+ * open_file - opens a file using a path from argv[1]
+ * @av: file name with path to be opened
+ *
+ * Return: a FILE * to the opened file
+ */
+FILE *open_file(char *av)
+{
+	FILE *stream = fopen(av, "r");
+
+	if (!stream)
 	{
-		if (strcmp(opcode, op_funcs[i].opcode) == 0)
-			return (op_funcs[i].f);
+		dprintf(STDERR_FILENO, "Error: Can't open file %s\n", av);
+		exit(EXIT_FAILURE);
 	}
-
-	return (NULL);
+	return (stream);
 }
 
 /**
- * monty - Primary function to execute a Monty bytecodes script.
- * @script_fd: File descriptor for an open Monty bytecodes script.
+ * read_file - reads the contents of a file line by line and calls
+ * the corresponding function of an opcode
+ * @stream: a file FILE * to the opened file
  *
- * Return: EXIT_SUCCESS on success, respective error code on failure.
+ * Return: a line read from the file represented by the descriptor
  */
-int monty(FILE *script_fd)
+void read_file(FILE *stream)
 {
-	stack_t *stack = NULL;
+	stack_t *head = NULL;
+	unsigned int line_num = 1;
+	size_t len = 0;
+	ssize_t nread;
 	char *line = NULL;
-	size_t len = 0, exit_status = EXIT_SUCCESS;
-	unsigned int line_number = 0, prev_tok_len = 0;
-	void (*op_func)(stack_t **, unsigned int);
+	int checker;
 
-	if (init_stack(&stack) == EXIT_FAILURE)
-		return (EXIT_FAILURE);
-
-	while (getline(&line, &len, script_fd) != -1)
+	while ((nread = getline(&line, &len, stream)) != -1)
 	{
-		line_number++;
-		op_toks = strtow(line, DELIMS);
-		if (op_toks == NULL)
+		token = tokenize(line, DELIMS);
+		if (token)
 		{
-			if (is_empty_line(line, DELIMS))
+			if (token[0][0] == '#')
+			{
+				free_token();
 				continue;
-			free_stack(&stack);
-			return (malloc_error());
+			}
+			checker = check_opcode(&head, line_num);
+			if (checker < 0 || flag)
+			{
+				flag = 0;
+				if (checker == -2)
+					dprintf(STDERR_FILENO,
+						"L%d: unknown instruction %s\n",
+						line_num, token[0]);
+				free_memory(&head, line, stream);
+			}
+			free_token(), token = NULL;
 		}
-		else if (op_toks[0][0] == '#') /* comment line */
-		{
-			free_tokens();
-			continue;
-		}
-		op_func = get_op_func(op_toks[0]);
-		if (op_func == NULL)
-		{
-			free_stack(&stack);
-			exit_status = unknown_op_error(op_toks[0], line_number);
-			free_tokens();
-			break;
-		}
-		prev_tok_len = token_arr_len();
-		op_func(&stack, line_number);
-		if (token_arr_len() != prev_tok_len)
-		{
-			if (op_toks && op_toks[prev_tok_len])
-				exit_status = atoi(op_toks[prev_tok_len]);
-			else
-				exit_status = EXIT_FAILURE;
-			free_tokens();
-			break;
-		}
-		free_tokens();
-	}
-	free_stack(&stack);
 
-	if (line && *line == 0)
+		line_num++;
+	}
+	free(line), free_stack(head);
+}
+
+
+/**
+ * check_opcode - checks if a token is a valid opcode and calls the
+ *                corresponding function
+ * @head: pointer to the top of the list
+ * @line_num: The line number of the opcode in the opened file
+ * Return: index of the opcode function on success
+ *         -2 when push fails
+ *         -1 when the others fail
+ */
+
+int check_opcode(stack_t **head, unsigned int line_num)
+{
+	unsigned int i = 0;
+	int checker;
+	instruction_t check[] = {{"push", push}, {"pall", pall},
+				 {"pint", pint}, {"pop", pop},
+				 {"swap", swap}, {"add", add},
+				 {"nop", nop}, {"sub", sub},
+				 {"div", divide}, {"mod", mod},
+				 {"mul", mul}, {"pchar", pchar},
+				 {"pstr", pstr}, {"rotl", rotl},
+				 {"rotr", rotr}, {NULL, NULL}};
+
+	if (strcmp("stack", token[0]) == 0)
+		STACK = 115;
+	else if (strcmp("queue", token[0]) == 0)
+		STACK = 113;
+	else
 	{
-		free(line);
-		return (malloc_error());
+		while (check[i].opcode)
+		{
+			checker = strcmp(token[0], check[i].opcode);
+			if (checker == 0)
+			{
+				checker = error_call(head, line_num);
+				if (!checker)
+				{
+					check[i].f(head, line_num);
+					return (i);
+				}
+				else
+					return (checker);
+			}
+			i++;
+		}
+		return (-2);
 	}
-
-	free(line);
-	return (exit_status);
+	return (0);
 }

@@ -1,59 +1,65 @@
 #include "monty.h"
 
-void monty_nop(stack_t **stack, unsigned int line_number);
-void monty_pchar(stack_t **stack, unsigned int line_number);
-void monty_pstr(stack_t **stack, unsigned int line_number);
 
 /**
- * monty_nop - Does absolutely nothing for the Monty opcode 'nop'.
- * @stack: A pointer to the top mode node of a stack_t linked list.
- * @line_number: The current working line number of a Monty bytecodes file.
+ * divide - divides the second top element of the stack by the top
+ * element of the stack.
+ * @head: address of the top of stack
+ * @line_num: line number of the instruction from @file
  */
-void monty_nop(stack_t **stack, unsigned int line_number)
+
+void divide(stack_t **head, unsigned int line_num __attribute__ ((unused)))
 {
-	(void)stack;
-	(void)line_number;
+	if (*head && (*head)->next)
+	{
+		(*head)->next->n /= (*head)->n;
+		pop(head, line_num);
+	}
 }
 
-/**
- * monty_pchar - Prints the character in the top value
- *               node of a stack_t linked list.
- * @stack: A pointer to the top mode node of a stack_t linked list.
- * @line_number: The current working line number of a Monty bytecodes file.
- */
-void monty_pchar(stack_t **stack, unsigned int line_number)
-{
-	if ((*stack)->next == NULL)
-	{
-		set_op_tok_error(pchar_error(line_number, "stack empty"));
-		return;
-	}
-	if ((*stack)->next->n < 0 || (*stack)->next->n > 127)
-	{
-		set_op_tok_error(pchar_error(line_number,
-									 "value out of range"));
-		return;
-	}
 
-	printf("%c\n", (*stack)->next->n);
+/**
+ * mul - multiplies the second top element of the stack with the
+ * top element of the stack.
+ * @head: address of the top of stack
+ * @line_num: line number of the instruction from @file
+ */
+
+void mul(stack_t **head, unsigned int line_num)
+{
+	if (*head && (*head)->next)
+	{
+		(*head)->next->n *= (*head)->n;
+		pop(head, line_num);
+	}
 }
 
+
 /**
- * monty_pstr - Prints the string contained in a stack_t linked list.
- * @stack: A pointer to the top mode node of a stack_t linked list.
- * @line_number: The current working line number of a Monty bytecodes file.
+ * mod - computes the rest of the division of the second top element
+ * of the stack by the top element of the stack.
+ * @head: address of the top of stack
+ * @line_num: line number of the instruction from @file
  */
-void monty_pstr(stack_t **stack, unsigned int line_number)
+
+void mod(stack_t **head, unsigned int line_num __attribute__ ((unused)))
 {
-	stack_t *tmp = (*stack)->next;
-
-	while (tmp && tmp->n != 0 && (tmp->n > 0 && tmp->n <= 127))
+	if (*head && (*head)->next)
 	{
-		printf("%c", tmp->n);
-		tmp = tmp->next;
+		(*head)->next->n %= (*head)->n;
+		pop(head, line_num);
 	}
+}
 
-	printf("\n");
 
-	(void)line_number;
+/**
+ * pchar - prints the char at the top of the stack,
+ * @head: address of the top of stack
+ * @line_num: line number of the instruction from @file
+ */
+
+void pchar(stack_t **head, unsigned int line_num __attribute__ ((unused)))
+{
+	if (*head)
+		printf("%c\n", (*head)->n);
 }
